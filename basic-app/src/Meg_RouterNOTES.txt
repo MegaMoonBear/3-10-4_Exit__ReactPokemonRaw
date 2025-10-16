@@ -1,0 +1,64 @@
+The line
+router.get('/team/:id', pokemonController.getPokemonById);
+belongs in your server-side Express routing code, not in MegNEW.js (which is client/browser code). Put it in an Express router file such as server/routes/team.js (or routes/team.js) and mount that router from your main server (e.g., server.js or app.js).
+
+Example server-side placement
+server/routes/team.js
+
+
+const express = require('express');
+const router = express.Router();
+const pokemonController = require('../controllers/pokemonController');
+
+// Handles GET /team/:id
+router.get('/:id', pokemonController.getPokemonById);
+
+module.exports = router;
+
+
+server/controllers/pokemonController.js (example)
+
+
+// Example controller - adapt to your data source (DB, array, etc.)
+exports.getPokemonById = async (req, res) => {
+  const id = req.params.id;
+  try {
+    // Replace with real data access
+    const item = await TeamModel.findById(id); // or lookup in an array
+    if (!item) return res.status(404).json({ message: 'Not found' });
+    res.json(item);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+
+Mount the router in your main Express app (server.js / app.js):
+
+
+const express = require('express');
+const app = express();
+
+const teamRoutes = require('./routes/team');
+app.use('/team', teamRoutes); // then GET /team/:id is handled
+
+
+Why it must be on the server
+router.get(...) is part of Express routing and needs the Express router and pokemonController objects. Those live on the Node/Express server. The browser-side script (MegNEW.js) uses fetch() to call an HTTP endpoint exposed by the server — it does not define server routes.
+
+
+
+
+// This file is a simple browser script for wiring buttons on the page.
+// Notes (1-6 from previous response):
+// 1) router.get('/team/:id', pokemonController.getPokemonById) belongs on the SERVER (Express routes), not in this client script.
+// 2) Place route definitions in an Express router file (e.g., routes/team.js) and export the router.
+// 3) Controller functions (e.g., getPokemonById) belong in server-side controller modules (e.g., controllers/pokemonController.js).
+// 4) Client code should call the server endpoint using fetch(), for example: fetch('/team/3') or fetch('/api/team/3') depending on mount path.
+// 5) Ensure the server is running and CORS/proxy is configured if the client and server are on different origins.
+// 6) Confirm the server response shape before trying to access properties like `.setup` on the returned JSON.
+// Additional notes:
+// (a) Route path mismatch: make sure the server route is mounted with the same path you call from the client. For example,
+//     if you mount with `app.use('/api', teamRoutes)`, then the client must call `/api/team/:id`.
+// (b) Controller export: ensure `pokemonController.getPokemonById` is exported from the controller file (e.g., module.exports = { getPokemonById }).
